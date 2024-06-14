@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
   pull-requests: write
 
 env:
@@ -23,13 +24,13 @@ jobs:
         with:
           # Checkout using the head commit to read commit message further down
           ref: ${{ github.event.pull_request.head.sha }}
-      
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GH_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: humanitec/setup-cli-action@v1
         with:
@@ -45,7 +46,7 @@ jobs:
             --name ${{ env.ENVIRONMENT_NAME }} \
             -t ${{ env.ENVIRONMENT_TYPE }} \
             --from ${{ env.BASE_ENVIRONMENT }}
-        
+
       - name: Build and push image
         id: build_push
         run: |
@@ -95,13 +96,13 @@ jobs:
                       --app ${{ vars.APP_NAME }} \
                       --env ${{ env.ENVIRONMENT_ID }} -o json \
                       | jq -r '. | map(. | select(.metadata.type == "dns")) | map((.metadata.res_id | split(".") | .[1]) + ": [" + .status.resource.host + "](https://" + .status.resource.host + ")") | join("\n")')
-          
+
           DEPLOYMENT_ERRORS=$(humctl get deployment-error \
               --token ${{ secrets.HUMANITEC_TOKEN }} \
               --org ${{ vars.HUMANITEC_ORG }} \
               --app ${{ vars.APP_NAME }} \
               --env ${{ env.ENVIRONMENT_ID }} -o json)
-          
+
           if [ "$DEPLOYMENT_ERRORS" = "[]" ]; then
             echo "## Deployment successfully completed for ${{ env.ENVIRONMENT_NAME }}! :tada:" >> pr_message.txt
             echo "" >> pr_message.txt
@@ -128,7 +129,7 @@ jobs:
             echo "</details>" >> pr_message.txt
             echo "" >> pr_message.txt
           fi
-          
+
           echo "### [View in Platform Orchestrator]($ENV_URL)" >> pr_message.txt
           echo "Deployment ID: $DEPLOYMENT_ID" >> pr_message.txt
 
@@ -169,7 +170,7 @@ jobs:
             echo '```' >> pr_message.txt
             echo "" >> pr_message.txt
             echo "</details>" >> pr_message.txt
-          
+
             echo "<details><summary>Resource Graph</summary>" >> pr_message.txt
             echo "" >> pr_message.txt
             echo "### Resource Graph:" >> pr_message.txt
